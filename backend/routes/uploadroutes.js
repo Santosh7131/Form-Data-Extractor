@@ -43,7 +43,7 @@ async function insertToPostgres(data) {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(__dirname, '..', 'insert_to_pg.py');
     const py = spawn(
-      'C://Users//intern00419//AppData//Local//Programs//Python//Python313//python.exe',
+      'python3',
       [scriptPath]
     );
     let stderr = '';
@@ -306,31 +306,5 @@ afterVerifyPool.createTableIfNotExists = async function(table, columns) {
   const colDefs = columns.map(k => `"${k}" TEXT`).join(', ');
   await afterVerifyPool.query(`CREATE TABLE IF NOT EXISTS ${table} (${colDefs});`);
 };
-
-// POST /api/save-verified
-router.post('/save-verified', async (req, res) => {
-  try {
-    const data = req.body.data;
-    if (!Array.isArray(data) || data.length === 0) {
-      return res.status(400).json({ error: 'No data provided' });
-    }
-    const allKeys = Array.from(new Set(data.flatMap(obj => Object.keys(obj))));
-    const table = 'documents';
-    await afterVerifyPool.createTableIfNotExists(table, allKeys);
-    await afterVerifyPool.ensureColumns(table, allKeys);
-    for (const row of data) {
-      await afterVerifyPool.ensureColumns(table, Object.keys(row));
-      const keys = Object.keys(row);
-      const values = keys.map(k => row[k]);
-      const colStr = keys.map(k => `"${k}"`).join(', ');
-      const valStr = keys.map((_, i) => `$${i + 1}`).join(', ');
-      await afterVerifyPool.query(`INSERT INTO ${table} (${colStr}) VALUES (${valStr});`, values);
-    }
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error saving verified data:', err);
-    res.status(500).json({ error: 'Failed to save verified data' });
-  }
-});
 
 module.exports = router;
